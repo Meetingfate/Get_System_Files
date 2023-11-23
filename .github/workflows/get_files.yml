@@ -82,51 +82,22 @@ jobs:
           sudo rm -rf "$GITHUB_WORKSPACE"/${{ env.device }}/TI_config "$GITHUB_WORKSPACE"/${{ env.device }}/config
       - name: 5.提取指定文件
         run: |
-          if [[ "${{ env.has_mi_ext }}" == "true" ]]; then
-              mkdir -p "$GITHUB_WORKSPACE"/get_files/mi_ext
-              mi_ext_build_prop=$(sudo find "$GITHUB_WORKSPACE"/"$device"/mi_ext -name "build.prop")
-          fi
-          mkdir -p "$GITHUB_WORKSPACE"/get_files/system
-          mkdir -p "$GITHUB_WORKSPACE"/get_files/vendor
-          mkdir -p "$GITHUB_WORKSPACE"/get_files/system_ext
           mkdir -p "$GITHUB_WORKSPACE"/get_files/product
-          mkdir -p "$GITHUB_WORKSPACE"/get_files/odm/firmware
-          mkdir -p "$GITHUB_WORKSPACE"/get_files/mi_ext
-          sudo 7z a "$GITHUB_WORKSPACE"/get_files/overlay.zip "$GITHUB_WORKSPACE"/"$device"/product/overlay/*
-          sudo 7z a "$GITHUB_WORKSPACE"/get_files/devicefeatures.zip "$GITHUB_WORKSPACE"/"$device"/product/etc/device_features/*
+          sudo 7z a "$GITHUB_WORKSPACE"/get_files/camera.zip "$GITHUB_WORKSPACE"/"$device"/product/priv-app/MiuiCamera*
         env:
           device: ${{ env.device }}
-      - name: 6.查询提取次数
-        id: get-cache
-        uses: actions/cache@main
-        with:
-          path: |
-            ${{ env.device }}_count
-          key: ${{ env.device }}
-      - if: ${{ steps.get-cache.outputs.cache-hit != 'true' }}
-        name: 7.生成提取次数
-        run: |
-          touch $GITHUB_WORKSPACE/${{ env.device }}_count
-          echo 1 > $GITHUB_WORKSPACE/${{ env.device }}_count
-          echo "number=1"  >> $GITHUB_ENV
-      - name: 8.打包
+      - name: 6.打包
         run: |
           mkdir -p "$GITHUB_WORKSPACE"/zip
           sudo chmod -R 777 "$GITHUB_WORKSPACE"/get_files
           7z a "$GITHUB_WORKSPACE"/zip/"$device"_get_files.zip "$GITHUB_WORKSPACE"/get_files/*
-          number=$(cat $GITHUB_WORKSPACE/"$device"_count)
-          if [[ $number != 1 ]]; then
-              ((number++))
-              echo $number >$GITHUB_WORKSPACE/"$device"_count
-              echo "number=$number"  >> $GITHUB_ENV
-          fi
           mv "$GITHUB_WORKSPACE"/zip/"$device"_get_files.zip "$GITHUB_WORKSPACE"/zip/"$device"_"${{ env.date }}"_"$number".zip
           cd "$GITHUB_WORKSPACE"
           touch file.log
           echo "${{ github.event.inputs.info }}" > file.log
         env:
           device: ${{ env.device }}
-      - name: 9.上传到Github Release
+      - name: 7.上传到Github Release
         uses: ncipollo/release-action@main
         with:
           artifacts: ${{ github.workspace }}/zip/*
@@ -136,13 +107,3 @@ jobs:
           allowUpdates: true
           artifactErrorsFailBuild: true
           token: ${{ secrets.GITHUB_TOKEN }}
-      - name: 10.发送开始构建通知
-        run: |
-          number=$(cat $GITHUB_WORKSPACE/"$device"_count)
-          if [[ "${{ env.device }}" == "umi" ]]; then
-              curl -i -X POST -H 'Content-type':'application/json' -d '{"token":"${{ secrets.appToken }}","title":"小米10 ${{ env.date }}_${{ env.number }} 已完成提取","content":" **本次提取文件为：${{ github.event.inputs.info }}** ","topic":"get_system_files","template":"markdown"}' http://www.pushplus.plus/send || true
-          elif [[ "${{ env.device }}" == "cmi" ]]; then
-              curl -i -X POST -H 'Content-type':'application/json' -d '{"token":"${{ secrets.appToken }}","title":"小米10Pro ${{ env.date }}_${{ env.number }} 已完成提取","content":" **本次提取文件为：${{ github.event.inputs.info }}** ","topic":"get_system_files","template":"markdown"}' http://www.pushplus.plus/send || true
-          elif [[ "${{ env.device }}" == "cas" ]]; then
-              curl -i -X POST -H 'Content-type':'application/json' -d '{"token":"${{ secrets.appToken }}","title":"小米10 Ultra ${{ env.date }}_${{ env.number }} 已完成提取","content":" **本次提取文件为：${{ github.event.inputs.info }}** ","topic":"get_system_files","template":"markdown"}' http://www.pushplus.plus/send || true
-          fi

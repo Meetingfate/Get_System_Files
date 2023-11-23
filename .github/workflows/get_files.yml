@@ -5,10 +5,6 @@ on:
       URL:
         description: "待操作的系统包下载地址"
         required: true
-      info:
-        description: "提取文件信息"
-        required: true
-        type: string
 jobs:
   build:
     runs-on: ubuntu-latest
